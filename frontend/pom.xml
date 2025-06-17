@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- inherit groupId, version, dependencyManagement & pluginManagement from parent -->
+    <parent>
+        <groupId>com.example.momentsharing</groupId>
+        <artifactId>moment-sharing</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>frontend</artifactId>
+    <packaging>pom</packaging>
+
+    <!-- tie this to -DskipTests on the command line -->
+    <properties>
+        <skipTests>false</skipTests>
+        <node.version>16.17.0</node.version>
+        <npm.version>8.15.0</npm.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+
+                    <!-- Safe-clean: won't fail if "clean" script is missing -->
+                    <execution>
+                        <id>npm-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>clean</argument>
+                                <argument>--if-present</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <!-- Install dependencies -->
+                    <execution>
+                        <id>npm-install</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>install</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <!-- Build step -->
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>build</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <!-- Test step: skips when -DskipTests, and runs Jest once (no watch) -->
+                    <execution>
+                        <id>npm-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <!-- skip this execution if -DskipTests=true -->
+                            <skip>${skipTests}</skip>
+
+                            <!-- ensure single-run, non-watching -->
+                            <environmentVariables>
+                                <CI>true</CI>
+                            </environmentVariables>
+
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>test</argument>
+                                <argument>--</argument>
+                                <argument>--watchAll=false</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <!-- Start step (manual only) -->
+                    <execution>
+                        <id>npm-start</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <arguments>
+                                <argument>run</argument>
+                                <argument>start</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
