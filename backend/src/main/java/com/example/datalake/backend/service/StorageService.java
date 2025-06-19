@@ -51,6 +51,71 @@ public class StorageService {
                                 HttpStatus.INTERNAL_SERVER_ERROR, "Failed to download file", e)));
     }
 
+    /* ───────────── Uploads ───────────── */
+
+    public Mono<String> uploadFileByUrl(String fileUrl) {
+        try {
+            /* 1) Normalise the path */
+            URI uri = new URI(fileUrl);
+            String cleanPath = uri.getPath().replaceAll("/{2,}", "/");
+            String[] rawSeg = cleanPath.split("/");
+
+            /* 2) Strip empty segments caused by leading "/" or "://" */
+            List<String> seg = new ArrayList<>();
+            for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
+
+            /* Expect “…/storage/v1/object/(public/)?{bucket}/{objectPath…}” */
+            int objIdx = seg.indexOf("object");
+            if (objIdx == -1 || objIdx + 1 >= seg.size()) {
+                return Mono.error(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "URL does not contain expected '/object/' segment"));
+            }
+
+            boolean hasPublic = "public".equals(seg.get(objIdx + 1));
+            String bucket = hasPublic ? seg.get(objIdx + 2)
+                    : seg.get(objIdx + 1);
+
+            int pathStart = hasPublic ? objIdx + 3
+                    : objIdx + 2;
+            if (pathStart >= seg.size()) {
+                return Mono.error(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "URL missing object path"));
+            }
+
+            /* Join remaining segments to reconstruct the object path */
+            StringBuilder sb = new StringBuilder();
+            for (int i = pathStart; i < seg.size(); i++) {
+                if (sb.length() > 0) sb.append('/');
+                sb.append(seg.get(i));
+            }
+            String objectPath = sb.toString();
+
+            /* 3) GET the remote file */
+            Mono<byte[]> bytesMono = webClient.get()
+                    .uri(fileUrl)
+                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                    .retrieve()
+                    .bodyToMono(byte[].class);
+
+            /* 4) POST /object/{bucket}/{objectPath} */
+            String endpoint = "/object/" + bucket + "/" + objectPath;
+            return bytesMono.flatMap(bytes ->
+                    webClient.post()
+                            .uri(endpoint)
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .bodyValue(bytes)
+                            .retrieve()
+                            .bodyToMono(String.class))
+                    .onErrorResume(e -> Mono.error(
+                            new ResponseStatusException(
+                                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload file", e)));
+
+        } catch (URISyntaxException ex) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Invalid file URL", ex));
+        }
+    }
+
     /* ───────────── Deletions ───────────── */
 
     public Mono<String> deleteObjectByUrl(String fileUrl) {
