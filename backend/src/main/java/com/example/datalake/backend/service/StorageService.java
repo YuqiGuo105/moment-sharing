@@ -54,56 +54,66 @@ public class StorageService {
     /* ───────────── Deletions ───────────── */
 
     public Mono<String> deleteObjectByUrl(String fileUrl) {
+        URI uri;
         try {
-            /* 1) Normalise the path */
-            URI uri          = new URI(fileUrl);
-            String cleanPath = uri.getPath().replaceAll("/{2,}", "/");   // collapse "//"
-            String[] rawSeg  = cleanPath.split("/");
-
-            /* 2) Strip empty segments caused by leading "/" or "://" */
-            List<String> seg = new ArrayList<>();
-            for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
-
-            /* Expect “…/storage/v1/object/(public/)?{bucket}/{objectPath…}” */
-            int objIdx = seg.indexOf("object");
-            if (objIdx == -1 || objIdx + 1 >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL does not contain expected '/object/' segment"));
-            }
-
-            boolean hasPublic = "public".equals(seg.get(objIdx + 1));
-            String bucket     = hasPublic ? seg.get(objIdx + 2)
-                    : seg.get(objIdx + 1);
-
-            int pathStart     = hasPublic ? objIdx + 3
-                    : objIdx + 2;
-            if (pathStart >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL missing object path"));
-            }
-
-            /* Join remaining segments to reconstruct the object path */
-            StringBuilder sb = new StringBuilder();
-            for (int i = pathStart; i < seg.size(); i++) {
-                if (sb.length() > 0) sb.append('/');
-                sb.append(seg.get(i));
-            }
-            String objectPath = sb.toString();     // no leading "/"
-
-            /* 3) DELETE /object/{bucket}/{objectPath} */
-            String endpoint = "/object/" + bucket + "/" + objectPath;
-
-            return webClient.delete()
-                    .uri(endpoint)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .onErrorResume(e -> Mono.error(
-                            new ResponseStatusException(
-                                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete object", e)));
-
-        } catch (URISyntaxException ex) {
+            uri = new URI(fileUrl);
+        } catch (URISyntaxException e) {
             return Mono.error(new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Invalid file URL", ex));
+                    HttpStatus.BAD_REQUEST, "Invalid file URL", e));
         }
+
+        String cleanPath = uri.getPath().replaceAll("/{2,}", "/");
+        String[] rawSeg  = cleanPath.split("/");
+
+        // Remove empty segments from leading '/' or '://'
+        List<String> seg = new ArrayList<>();
+        for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
+
+        // Expect path like ".../storage/v1/object/{public|sign}?/{bucket}/{objectPath}".
+        int objIdx = seg.indexOf("object");
+        if (objIdx == -1) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "URL does not contain '/object' segment"));
+        }
+
+        int bucketIdx = objIdx + 1;
+        if (bucketIdx >= seg.size()) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "URL missing bucket information"));
+        }
+
+        // Skip optional "public" or "sign" segments
+        String first = seg.get(bucketIdx);
+        if ("public".equals(first) || "sign".equals(first)) {
+            bucketIdx++;
+        }
+
+        if (bucketIdx >= seg.size()) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "URL missing bucket information"));
+        }
+
+        String bucket = seg.get(bucketIdx);
+        int pathStart = bucketIdx + 1;
+        if (pathStart >= seg.size()) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "URL missing object path"));
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = pathStart; i < seg.size(); i++) {
+            if (sb.length() > 0) sb.append('/');
+            sb.append(seg.get(i));
+        }
+        String objectPath = sb.toString();
+
+        String endpoint = "/object/" + bucket + "/" + objectPath;
+
+        return webClient.delete()
+                .uri(endpoint)
+                .retrieve()
+                .bodyToMono(String.class)
+                .onErrorResume(e -> Mono.error(new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete object", e)));
     }
 }
