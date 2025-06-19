@@ -6,11 +6,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,9 +24,56 @@ import java.util.List;
 public class StorageService {
     private final WebClient webClient;
 
+    /** Simple container for parsed Supabase URL pieces */
+    private static class ParsedPath {
+        final String bucket;
+        final List<String> objectSegments;
+
+        ParsedPath(String bucket, List<String> objectSegments) {
+            this.bucket = bucket;
+            this.objectSegments = objectSegments;
+        }
+    }
+
     public StorageService(WebClient supabaseWebClient,
                           @Value("${supabase.storage.root}") String ignored) {
         this.webClient = supabaseWebClient;          // baseUrl already set in config
+    }
+
+    /**
+     * Parse a Supabase Storage URL and extract bucket and path segments.
+     * This method is lenient with "public" URLs and normalises duplicate slashes.
+     */
+    private ParsedPath parseUrl(String fileUrl) throws URISyntaxException {
+        URI uri = new URI(fileUrl);
+
+        // Use raw path so %2F etc. stay encoded. Remove duplicate slashes.
+        String cleanPath = uri.getRawPath().replaceAll("/{2,}", "/");
+        String[] rawSeg = cleanPath.split("/");
+
+        List<String> seg = new ArrayList<>();
+        for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
+
+        int objIdx = seg.indexOf("object");
+        if (objIdx == -1 || objIdx + 1 >= seg.size()) {
+            throw new URISyntaxException(fileUrl, "URL does not contain expected '/object/' segment");
+        }
+
+        boolean hasPublic = objIdx + 1 < seg.size() && "public".equals(seg.get(objIdx + 1));
+        String bucket = hasPublic ? seg.get(objIdx + 2) : seg.get(objIdx + 1);
+
+        int pathStart = hasPublic ? objIdx + 3 : objIdx + 2;
+        if (pathStart >= seg.size()) {
+            throw new URISyntaxException(fileUrl, "URL missing object path");
+        }
+
+        List<String> objectSeg = new ArrayList<>();
+        for (int i = pathStart; i < seg.size(); i++) {
+            // decode each piece individually
+            objectSeg.add(URLDecoder.decode(seg.get(i), StandardCharsets.UTF_8));
+        }
+
+        return new ParsedPath(bucket, objectSeg);
     }
 
     /* ───────────── Buckets ───────────── */
@@ -55,40 +105,7 @@ public class StorageService {
 
     public Mono<String> uploadFileByUrl(String fileUrl) {
         try {
-            /* 1) Normalise the path */
-            URI uri = new URI(fileUrl);
-            String cleanPath = uri.getPath().replaceAll("/{2,}", "/");
-            String[] rawSeg = cleanPath.split("/");
-
-            /* 2) Strip empty segments caused by leading "/" or "://" */
-            List<String> seg = new ArrayList<>();
-            for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
-
-            /* Expect “…/storage/v1/object/(public/)?{bucket}/{objectPath…}” */
-            int objIdx = seg.indexOf("object");
-            if (objIdx == -1 || objIdx + 1 >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL does not contain expected '/object/' segment"));
-            }
-
-            boolean hasPublic = "public".equals(seg.get(objIdx + 1));
-            String bucket = hasPublic ? seg.get(objIdx + 2)
-                    : seg.get(objIdx + 1);
-
-            int pathStart = hasPublic ? objIdx + 3
-                    : objIdx + 2;
-            if (pathStart >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL missing object path"));
-            }
-
-            /* Join remaining segments to reconstruct the object path */
-            StringBuilder sb = new StringBuilder();
-            for (int i = pathStart; i < seg.size(); i++) {
-                if (sb.length() > 0) sb.append('/');
-                sb.append(seg.get(i));
-            }
-            String objectPath = sb.toString();
+            ParsedPath parsed = parseUrl(fileUrl);
 
             /* 3) GET the remote file */
             Mono<byte[]> bytesMono = webClient.get()
@@ -98,10 +115,14 @@ public class StorageService {
                     .bodyToMono(byte[].class);
 
             /* 4) POST /object/{bucket}/{objectPath} */
-            String endpoint = "/object/" + bucket + "/" + objectPath;
             return bytesMono.flatMap(bytes ->
                     webClient.post()
-                            .uri(endpoint)
+                            .uri(uriBuilder -> {
+                                UriComponentsBuilder b = UriComponentsBuilder.fromPath("");
+                                b.pathSegment("object", parsed.bucket);
+                                b.pathSegment(parsed.objectSegments.toArray(new String[0]));
+                                return b.build();
+                            })
                             .contentType(MediaType.APPLICATION_OCTET_STREAM)
                             .bodyValue(bytes)
                             .retrieve()
@@ -120,46 +141,15 @@ public class StorageService {
 
     public Mono<String> deleteObjectByUrl(String fileUrl) {
         try {
-            /* 1) Normalise the path */
-            URI uri          = new URI(fileUrl);
-            String cleanPath = uri.getPath().replaceAll("/{2,}", "/");   // collapse "//"
-            String[] rawSeg  = cleanPath.split("/");
-
-            /* 2) Strip empty segments caused by leading "/" or "://" */
-            List<String> seg = new ArrayList<>();
-            for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
-
-            /* Expect “…/storage/v1/object/(public/)?{bucket}/{objectPath…}” */
-            int objIdx = seg.indexOf("object");
-            if (objIdx == -1 || objIdx + 1 >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL does not contain expected '/object/' segment"));
-            }
-
-            boolean hasPublic = "public".equals(seg.get(objIdx + 1));
-            String bucket     = hasPublic ? seg.get(objIdx + 2)
-                    : seg.get(objIdx + 1);
-
-            int pathStart     = hasPublic ? objIdx + 3
-                    : objIdx + 2;
-            if (pathStart >= seg.size()) {
-                return Mono.error(new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "URL missing object path"));
-            }
-
-            /* Join remaining segments to reconstruct the object path */
-            StringBuilder sb = new StringBuilder();
-            for (int i = pathStart; i < seg.size(); i++) {
-                if (sb.length() > 0) sb.append('/');
-                sb.append(seg.get(i));
-            }
-            String objectPath = sb.toString();     // no leading "/"
-
-            /* 3) DELETE /object/{bucket}/{objectPath} */
-            String endpoint = "/object/" + bucket + "/" + objectPath;
+            ParsedPath parsed = parseUrl(fileUrl);
 
             return webClient.delete()
-                    .uri(endpoint)
+                    .uri(uriBuilder -> {
+                        UriComponentsBuilder b = UriComponentsBuilder.fromPath("");
+                        b.pathSegment("object", parsed.bucket);
+                        b.pathSegment(parsed.objectSegments.toArray(new String[0]));
+                        return b.build();
+                    })
                     .retrieve()
                     .bodyToMono(String.class)
                     .onErrorResume(e -> Mono.error(
