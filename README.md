@@ -24,3 +24,10 @@ http://localhost:8080/swagger-ui.html
 
 The OpenAPI specification can be fetched from `/v3/api-docs`.
 
+## Testing
+
+The backend tests run against an in-memory H2 database. Schema and sample data
+are imported from `schema-test.sql` and `data-test.sql` under
+`backend/src/test/resources`. Supabase integration is disabled for the `test`
+profile, so no external services are required.
+
