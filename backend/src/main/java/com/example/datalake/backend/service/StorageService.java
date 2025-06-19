@@ -6,16 +6,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Supabase Storage helper – URL-centric version.
@@ -27,11 +23,11 @@ public class StorageService {
     /** Simple container for parsed Supabase URL pieces */
     private static class ParsedPath {
         final String bucket;
-        final List<String> objectSegments;
+        final String objectPath; // already URL encoded, may contain slashes
 
-        ParsedPath(String bucket, List<String> objectSegments) {
+        ParsedPath(String bucket, String objectPath) {
             this.bucket = bucket;
-            this.objectSegments = objectSegments;
+            this.objectPath = objectPath;
         }
     }
 
@@ -47,33 +43,30 @@ public class StorageService {
     private ParsedPath parseUrl(String fileUrl) throws URISyntaxException {
         URI uri = new URI(fileUrl);
 
-        // Use raw path so %2F etc. stay encoded. Remove duplicate slashes.
-        String cleanPath = uri.getRawPath().replaceAll("/{2,}", "/");
-        String[] rawSeg = cleanPath.split("/");
-
-        List<String> seg = new ArrayList<>();
-        for (String s : rawSeg) if (!s.isEmpty()) seg.add(s);
-
-        int objIdx = seg.indexOf("object");
-        if (objIdx == -1 || objIdx + 1 >= seg.size()) {
-            throw new URISyntaxException(fileUrl, "URL does not contain expected '/object/' segment");
+        // Keep raw path so we do not double decode
+        String rawPath = uri.getRawPath();
+        int idx = rawPath.indexOf("/object/");
+        if (idx == -1) {
+            throw new URISyntaxException(fileUrl, "URL missing '/object/' segment");
         }
 
-        boolean hasPublic = objIdx + 1 < seg.size() && "public".equals(seg.get(objIdx + 1));
-        String bucket = hasPublic ? seg.get(objIdx + 2) : seg.get(objIdx + 1);
+        String remainder = rawPath.substring(idx + 8); // after '/object/'
+        if (remainder.startsWith("public/")) {
+            remainder = remainder.substring(7); // strip 'public/'
+        }
 
-        int pathStart = hasPublic ? objIdx + 3 : objIdx + 2;
-        if (pathStart >= seg.size()) {
+        int slash = remainder.indexOf('/');
+        if (slash == -1) {
+            throw new URISyntaxException(fileUrl, "URL missing bucket or object path");
+        }
+
+        String bucket = remainder.substring(0, slash);
+        String objectPath = remainder.substring(slash + 1); // keep encoded
+        if (objectPath.isEmpty()) {
             throw new URISyntaxException(fileUrl, "URL missing object path");
         }
 
-        List<String> objectSeg = new ArrayList<>();
-        for (int i = pathStart; i < seg.size(); i++) {
-            // decode each piece individually
-            objectSeg.add(URLDecoder.decode(seg.get(i), StandardCharsets.UTF_8));
-        }
-
-        return new ParsedPath(bucket, objectSeg);
+        return new ParsedPath(bucket, objectPath);
     }
 
     /* ───────────── Buckets ───────────── */
@@ -117,19 +110,16 @@ public class StorageService {
             /* 4) POST /object/{bucket}/{objectPath} */
             return bytesMono.flatMap(bytes ->
                     webClient.post()
-                            .uri(uriBuilder -> {
-                                UriComponentsBuilder b = UriComponentsBuilder.fromPath("");
-                                b.pathSegment("object", parsed.bucket);
-                                b.pathSegment(parsed.objectSegments.toArray(new String[0]));
-                                return b.build();
-                            })
+                            .uri("/object/" + parsed.bucket + "/" + parsed.objectPath)
                             .contentType(MediaType.APPLICATION_OCTET_STREAM)
                             .bodyValue(bytes)
                             .retrieve()
                             .bodyToMono(String.class))
-                    .onErrorResume(e -> Mono.error(
-                            new ResponseStatusException(
-                                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload file", e)));
+                    .onErrorResume(WebClientResponseException.class,
+                            ex -> Mono.error(new ResponseStatusException(
+                                    ex.getStatusCode(), ex.getResponseBodyAsString(), ex)))
+                    .onErrorResume(e -> Mono.error(new ResponseStatusException(
+                            HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload file", e)));
 
         } catch (URISyntaxException ex) {
             return Mono.error(new ResponseStatusException(
@@ -144,17 +134,14 @@ public class StorageService {
             ParsedPath parsed = parseUrl(fileUrl);
 
             return webClient.delete()
-                    .uri(uriBuilder -> {
-                        UriComponentsBuilder b = UriComponentsBuilder.fromPath("");
-                        b.pathSegment("object", parsed.bucket);
-                        b.pathSegment(parsed.objectSegments.toArray(new String[0]));
-                        return b.build();
-                    })
+                    .uri("/object/" + parsed.bucket + "/" + parsed.objectPath)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .onErrorResume(e -> Mono.error(
-                            new ResponseStatusException(
-                                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete object", e)));
+                    .onErrorResume(WebClientResponseException.class,
+                            ex -> Mono.error(new ResponseStatusException(
+                                    ex.getStatusCode(), ex.getResponseBodyAsString(), ex)))
+                    .onErrorResume(e -> Mono.error(new ResponseStatusException(
+                            HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete object", e)));
 
         } catch (URISyntaxException ex) {
             return Mono.error(new ResponseStatusException(
