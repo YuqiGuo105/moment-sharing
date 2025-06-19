@@ -11,7 +11,8 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
-The service will start on port `8080` by default.
+The service will start on port `8080` by default. A simple health check is
+available at `http://localhost:8080/api/ping`, which should return `pong`.
 
 ## API documentation
 
