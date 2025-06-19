@@ -28,6 +28,8 @@ The OpenAPI specification can be fetched from `/v3/api-docs`.
 
 The backend tests run against an in-memory H2 database. Schema and sample data
 are imported from `schema-test.sql` and `data-test.sql` under
-`backend/src/test/resources`. Supabase integration is disabled for the `test`
-profile, so no external services are required.
+`backend/src/test/resources`. Supabase-related beans, such as the storage
+client, are not loaded when the `test` profile is active thanks to
+`@Profile("!test")` annotations. This means CI pipelines can execute the
+tests without connecting to Supabase or any other external service.
 

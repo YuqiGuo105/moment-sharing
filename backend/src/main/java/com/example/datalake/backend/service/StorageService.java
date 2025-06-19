@@ -1,6 +1,7 @@
 package com.example.datalake.backend.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ import java.util.List;
  * Supabase Storage helper – URL-centric version.
  */
 @Service
+@Profile("!test")
 public class StorageService {
     private final WebClient webClient;
 
