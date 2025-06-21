@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Sql("/records.sql")
+@Sql(scripts = "/records.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class RecordControllerTests {
 
     @Autowired
