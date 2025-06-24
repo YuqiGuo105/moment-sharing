@@ -22,32 +22,31 @@ public class RecordController {
 
     @GetMapping
     @Operation(summary = "List all records")
-    public List<Record> list() {
+    public List<RecordDto> list() {
         return service.findAll();
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a record by id")
-    public ResponseEntity<Record> get(@PathVariable UUID id) {
-        Record record = service.findById(id);
+    public ResponseEntity<RecordDto> get(@PathVariable UUID id) {
+        RecordDto record = service.findById(id);
         return record != null ? ResponseEntity.ok(record) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     @Operation(summary = "Create a new record")
-    public ResponseEntity<Record> create(@RequestBody Record record) {
-        Record saved = service.save(record);
+    public ResponseEntity<RecordDto> create(@RequestBody RecordDto record) {
+        RecordDto saved = service.create(record);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an existing record")
-    public ResponseEntity<Record> update(@PathVariable UUID id, @RequestBody Record record) {
+    public ResponseEntity<RecordDto> update(@PathVariable UUID id, @RequestBody RecordDto record) {
         if (service.findById(id) == null) {
             return ResponseEntity.notFound().build();
         }
-        record.setId(id);
-        Record saved = service.save(record);
+        RecordDto saved = service.update(id, record);
         return ResponseEntity.ok(saved);
     }
 
