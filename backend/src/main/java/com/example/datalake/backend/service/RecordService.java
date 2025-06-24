@@ -1,5 +1,7 @@
-package com.example.datalake.backend.record;
+package com.example.datalake.backend.service;
 
+import com.example.datalake.backend.dao.RecordRepository;
+import com.example.datalake.backend.model.Record;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
