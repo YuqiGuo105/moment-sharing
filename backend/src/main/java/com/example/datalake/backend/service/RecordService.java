@@ -3,12 +3,11 @@ package com.example.datalake.backend.service;
 import com.example.datalake.backend.dao.SpringDataRecordRepository;
 import com.example.datalake.backend.dto.RecordDto;
 import com.example.datalake.backend.model.Record;
+import com.google.cloud.Timestamp;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +28,7 @@ public class RecordService {
     public Mono<Record> create(RecordDto dto) {
         Record entity = toEntity(dto);
         if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(OffsetDateTime.now());
+            entity.setCreatedAt(Timestamp.now());
         }
         return repo.save(entity);
     }
@@ -48,9 +47,13 @@ public class RecordService {
     /* ---------- Mapping helper ---------- */
     private Record toEntity(RecordDto dto) {
         Record r = new Record();
-        r.setCreatedAt(dto.getCreatedAt());
+        r.setCreatedAt(dto.getCreatedAt() != null
+                ? Timestamp.ofTimeSecondsAndNanos(
+                dto.getCreatedAt().toEpochSecond(), dto.getCreatedAt().getNano())
+                : Timestamp.now());
         r.setUrl(dto.getUrl());
         r.setOwner(dto.getOwner());
         return r;
     }
+
 }

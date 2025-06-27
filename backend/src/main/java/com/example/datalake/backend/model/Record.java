@@ -1,5 +1,6 @@
 package com.example.datalake.backend.model;
 
+import com.google.cloud.firestore.annotation.DocumentId;
 import com.google.cloud.spring.data.firestore.Document;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -21,10 +22,10 @@ import java.util.UUID;
 @AllArgsConstructor
 @Document(collectionName = "records")
 public class Record {
-    @Id
+    @DocumentId
     private String id;
 
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private com.google.cloud.Timestamp createdAt;
 
     @NotBlank(message = "url must not be blank")
     private String url;

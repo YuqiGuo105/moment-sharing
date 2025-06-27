@@ -1,6 +1,7 @@
 package com.example.datalake.backend.dto;
 
 import com.example.datalake.backend.model.Record;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,7 +18,11 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RecordDto {
-    @Schema(description = "Creation timestamp (ISO-8601)", example = "2025-06-26T15:04:05Z")
+    @Schema(
+            description = "Creation timestamp (ISO-8601, UTC)",
+            example     = "2025-06-26T15:04:05Z"
+    )
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssX")
     private OffsetDateTime createdAt;
 
     @Schema(description = "Resource URL", example = "https://example.com")
