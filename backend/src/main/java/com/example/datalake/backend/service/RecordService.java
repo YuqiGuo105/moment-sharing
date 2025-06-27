@@ -5,7 +5,9 @@ import com.example.datalake.backend.dto.RecordDto;
 import com.example.datalake.backend.model.Record;
 import com.google.cloud.Timestamp;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -40,14 +42,29 @@ public class RecordService {
     }
 
     /* ---------- UPDATE ---------- */
-    public Mono<Record> update(String id, Record updated) {
-        updated.setId(id);
-        return repo.save(updated);
+    public Mono<Record> update(String id, Record updated, String username) {
+        return repo.findById(id)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                .flatMap(existing -> {
+                    if (!existing.getOwner().equals(username)) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN));
+                    }
+                    updated.setId(id);
+                    updated.setOwner(username);
+                    return repo.save(updated);
+                });
     }
 
     /* ---------- DELETE ---------- */
-    public Mono<Void> deleteById(String id) {
-        return repo.deleteById(id);
+    public Mono<Void> deleteById(String id, String username) {
+        return repo.findById(id)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                .flatMap(existing -> {
+                    if (!existing.getOwner().equals(username)) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN));
+                    }
+                    return repo.deleteById(id);
+                });
     }
 
     /* ---------- Mapping helper ---------- */
