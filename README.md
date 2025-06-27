@@ -13,6 +13,13 @@ cd backend
 
 The service starts on port `8080` by default.
 
+If you are using a Firebase service account JSON file, specify its path using the
+`firebase.credentials-file` property:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--firebase.credentials-file=/path/to/key.json"
+```
+
 ## API documentation
 
 Swagger UI is available once the backend is running. Open your browser at:

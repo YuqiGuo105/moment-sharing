@@ -1,65 +1,56 @@
 package com.example.datalake.backend.service;
 
+import com.example.datalake.backend.dao.SpringDataRecordRepository;
+import com.example.datalake.backend.dto.RecordDto;
 import com.example.datalake.backend.model.Record;
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.firebase.cloud.FirestoreClient;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.UUID;
+import java.time.OffsetDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class RecordService {
 
-    protected final Firestore firestore;
+    private final SpringDataRecordRepository repo;
 
-    public RecordService() {
-        this(FirestoreClient.getFirestore());
+    /* ---------- READ ---------- */
+    public Flux<Record> findAll() {
+        return repo.findAll();
     }
 
-    public RecordService(Firestore firestore) {
-        this.firestore = firestore;
+    public Mono<Record> findById(String id) {
+        return repo.findById(id);
     }
 
-    public List<Record> findAll() {
-        try {
-            ApiFuture<com.google.cloud.firestore.QuerySnapshot> future = firestore.collection("records").get();
-            return future.get().getDocuments().stream()
-                    .map(d -> d.toObject(Record.class))
-                    .toList();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    /* ---------- CREATE (DTO → Entity) ---------- */
+    public Mono<Record> create(RecordDto dto) {
+        Record entity = toEntity(dto);
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(OffsetDateTime.now());
         }
+        return repo.save(entity);
     }
 
-    public Record findById(UUID id) {
-        try {
-            DocumentReference ref = firestore.collection("records").document(id.toString());
-            return ref.get().get().toObject(Record.class);
-        } catch (Exception e) {
-            return null;
-        }
+    /* ---------- UPDATE ---------- */
+    public Mono<Record> update(String id, Record updated) {
+        updated.setId(id);
+        return repo.save(updated);
     }
 
-    public Record save(Record record) {
-        try {
-            if (record.getId() == null) {
-                record.setId(UUID.randomUUID());
-            }
-            firestore.collection("records").document(record.getId().toString()).set(record).get();
-            return record;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    /* ---------- DELETE ---------- */
+    public Mono<Void> deleteById(String id) {
+        return repo.deleteById(id);
     }
 
-    public void deleteById(UUID id) {
-        try {
-            firestore.collection("records").document(id.toString()).delete().get();
-        } catch (Exception ignored) {
-        }
+    /* ---------- Mapping helper ---------- */
+    private Record toEntity(RecordDto dto) {
+        Record r = new Record();
+        r.setCreatedAt(dto.getCreatedAt());
+        r.setUrl(dto.getUrl());
+        r.setOwner(dto.getOwner());
+        return r;
     }
 }

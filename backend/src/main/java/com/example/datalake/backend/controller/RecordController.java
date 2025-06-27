@@ -4,73 +4,76 @@ import com.example.datalake.backend.model.Record;
 import com.example.datalake.backend.dto.RecordDto;
 import com.example.datalake.backend.service.RecordService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Record", description = "CRUD operations for Record documents")
 @RestController
 @RequestMapping("/records")
-@Tag(name = "Record", description = "Operations on Record table")
+@RequiredArgsConstructor
 public class RecordController {
 
     private final RecordService service;
 
-    public RecordController(RecordService service) {
-        this.service = service;
-    }
+    /* ---------- READ ---------- */
 
-    @GetMapping
     @Operation(summary = "List all records")
-    public List<RecordDto> list() {
-        return service.findAll().stream()
-                .map(RecordDto::fromRecord)
-                .toList();
+    @GetMapping
+    public Flux<Record> all() {
+        return service.findAll();
     }
 
+    @Operation(summary = "Find a record by ID")
+    @ApiResponse(responseCode = "200", description = "Found",
+            content = @Content(schema = @Schema(implementation = Record.class)))
     @GetMapping("/{id}")
-    @Operation(summary = "Get a record by id")
-    public ResponseEntity<RecordDto> get(@PathVariable UUID id) {
-        Record record = service.findById(id);
-        return record != null
-                ? ResponseEntity.ok(RecordDto.fromRecord(record))
-                : ResponseEntity.notFound().build();
+    public Mono<Record> get(@Parameter(description = "Firestore document ID") @PathVariable String id) {
+        return service.findById(id);
     }
 
+    /* ---------- CREATE (RecordDto IN, Record OUT) ---------- */
+
+    @Operation(summary = "Create a new record (ID auto-generated)")
+    @ApiResponse(responseCode = "201", description = "Created",
+            content = @Content(schema = @Schema(implementation = Record.class)))
     @PostMapping
-    @Operation(summary = "Create a new record")
-    public ResponseEntity<RecordDto> create(@RequestBody RecordDto dto) {
-        Record record = new Record();
-        record.setUrl(dto.getUrl());
-        record.setOwner(dto.getOwner());
-        Record saved = service.save(record);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(RecordDto.fromRecord(saved));
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<Record> create(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    content = @Content(schema = @Schema(implementation = RecordDto.class)))
+            @Valid @RequestBody RecordDto in) {
+        return service.create(in);
     }
 
+    /* ---------- UPDATE (Record IN) ---------- */
+
+    @Operation(summary = "Update an existing record by ID")
     @PutMapping("/{id}")
-    @Operation(summary = "Update an existing record")
-    public ResponseEntity<RecordDto> update(@PathVariable UUID id, @RequestBody RecordDto dto) {
-        Record existing = service.findById(id);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-        existing.setUrl(dto.getUrl());
-        existing.setOwner(dto.getOwner());
-        Record saved = service.save(existing);
-        return ResponseEntity.ok(RecordDto.fromRecord(saved));
+    public Mono<Record> update(
+            @Parameter(description = "Firestore document ID") @PathVariable String id,
+            @Valid @RequestBody Record in) {
+        return service.update(id, in);
     }
 
+    /* ---------- DELETE ---------- */
+
+    @Operation(summary = "Delete a record by ID")
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a record")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        if (service.findById(id) == null) {
-            return ResponseEntity.notFound().build();
-        }
-        service.deleteById(id);
-        return ResponseEntity.noContent().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> delete(@Parameter(description = "Firestore document ID") @PathVariable String id) {
+        return service.deleteById(id);
     }
 }
