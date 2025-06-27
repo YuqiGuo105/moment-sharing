@@ -27,6 +27,11 @@ public class FirebaseConfig {
                 try (InputStream in = new FileInputStream(credentialsFile)) {
                     builder.setCredentials(GoogleCredentials.fromStream(in));
                 }
+                // Ensure Spring Cloud GCP uses the same credentials if not already set
+                String gcpCredsProp = System.getProperty("spring.cloud.gcp.credentials.location");
+                if (gcpCredsProp == null || gcpCredsProp.isBlank()) {
+                    System.setProperty("spring.cloud.gcp.credentials.location", "file:" + credentialsFile);
+                }
             } else {
                 builder.setCredentials(GoogleCredentials.getApplicationDefault());
             }
