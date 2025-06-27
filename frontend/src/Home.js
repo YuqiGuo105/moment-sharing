@@ -28,7 +28,12 @@ function Home({ user }) {
 
   return (
     <div className="home-container">
-      <img src={user.photoURL || logo} alt="Profile" className="profile" />
+      <img
+        src={user.photoURL || logo}
+        alt="Profile"
+        className="profile"
+        referrerPolicy="no-referrer"
+      />
       <h1>Welcome {user.displayName || user.email}</h1>
       <p>{user.email}</p>
 
