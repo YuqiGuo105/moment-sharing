@@ -12,21 +12,8 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
 
-let firebaseApp;
-let firestore;
-let auth;
-let storage;
+export const firebaseApp = initializeApp(firebaseConfig);
+export const firestore = getFirestore(firebaseApp);
+export const auth = getAuth(firebaseApp);
 
-if (process.env.NODE_ENV !== 'test') {
-  firebaseApp = initializeApp(firebaseConfig);
-  firestore = getFirestore(firebaseApp);
-  auth = getAuth(firebaseApp);
-  storage = getStorage(firebaseApp);
-} else {
-  firebaseApp = {};
-  firestore = {};
-  auth = {};
-  storage = {};
-}
-
-export { firebaseApp, firestore, auth, storage };
+export const storage = getStorage(firebaseApp);
