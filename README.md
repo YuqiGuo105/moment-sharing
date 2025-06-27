@@ -54,3 +54,20 @@ Set `REACT_APP_BACKEND_BASE_URL` to the URL of the Spring Boot backend. When run
 ```
 REACT_APP_BACKEND_BASE_URL=http://localhost:8080
 ```
+
+## Running with Docker
+
+Dockerfiles are provided for the backend and frontend. The easiest way to run the
+full stack is using Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+The backend will be exposed on `http://localhost:8080` and the frontend on
+`http://localhost:3000`.
+
+If you need to provide a Firebase service account file, mount it into the backend
+container and set the `firebase.credentials-file` property via an environment
+variable or command line argument.
+
