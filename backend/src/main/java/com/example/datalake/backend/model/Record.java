@@ -1,5 +1,9 @@
 package com.example.datalake.backend.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.*;
 
 
@@ -12,8 +16,12 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "records")
 public class Record {
 
+    @Id
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
     private OffsetDateTime createdAt;
