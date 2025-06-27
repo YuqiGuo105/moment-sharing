@@ -24,6 +24,10 @@ public class RecordService {
         return repo.findById(id);
     }
 
+    public Flux<Record> findByOwner(String owner) {
+        return repo.findByOwner(owner);
+    }
+
     /* ---------- CREATE (DTO → Entity) ---------- */
     public Mono<Record> create(RecordDto dto) {
         Record entity = toEntity(dto);
