@@ -1,6 +1,28 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from 'firebase/auth';
 import { auth } from './lib/firebaseClient';
+import './Login.css';
+
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" fill="#4285f4" />
+    <text
+      x="12"
+      y="16"
+      textAnchor="middle"
+      fontSize="12"
+      fill="#fff"
+      fontFamily="Arial, Helvetica, sans-serif"
+    >
+      G
+    </text>
+  </svg>
+);
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -36,10 +58,10 @@ function Login() {
   };
 
   return (
-    <div>
+    <div className="login-container">
       <h2>Login</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
+      {error && <p className="error">{error}</p>}
+      <form className="login-form" onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"
@@ -52,9 +74,11 @@ function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button type="submit">Login</button>
+        <button type="submit">Login / Register</button>
       </form>
-      <button onClick={handleGoogleLogin}>Login with Google</button>
+      <button className="google-button" onClick={handleGoogleLogin}>
+        <GoogleIcon /> Sign in with Google
+      </button>
     </div>
   );
 }
