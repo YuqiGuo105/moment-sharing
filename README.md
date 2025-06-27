@@ -31,3 +31,20 @@ http://localhost:8080/swagger-ui.html
 
 The OpenAPI specification can be fetched from `/v3/api-docs`.
 
+
+## Frontend environment
+
+Create a `.env.local` file inside the `frontend` directory based on `.env.example`:
+
+```bash
+cd frontend
+cp .env.example .env.local
+```
+
+Fill in your Firebase credentials. The `REACT_APP_FIREBASE_STORAGE_BUCKET` value should use the `appspot.com` domain, for example:
+
+```
+REACT_APP_FIREBASE_STORAGE_BUCKET=blog-d45ae.appspot.com
+```
+
+Using the `firebasestorage.app` domain will cause unauthorized errors when accessing uploaded files.
