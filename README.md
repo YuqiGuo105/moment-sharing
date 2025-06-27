@@ -48,3 +48,9 @@ REACT_APP_FIREBASE_STORAGE_BUCKET=blog-d45ae.appspot.com
 ```
 
 Using the `firebasestorage.app` domain will cause unauthorized errors when accessing uploaded files.
+
+Set `REACT_APP_BACKEND_BASE_URL` to the URL of the Spring Boot backend. When running locally, use:
+
+```
+REACT_APP_BACKEND_BASE_URL=http://localhost:8080
+```
