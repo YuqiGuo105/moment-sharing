@@ -7,7 +7,13 @@ const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  // The storage bucket must use the `appspot.com` domain. Using
+  // `firebasestorage.app` will cause unauthorized errors when accessing files.
+  storageBucket:
+    process.env.REACT_APP_FIREBASE_STORAGE_BUCKET ||
+    (process.env.REACT_APP_FIREBASE_PROJECT_ID
+      ? `${process.env.REACT_APP_FIREBASE_PROJECT_ID}.appspot.com`
+      : undefined),
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
