@@ -17,4 +17,12 @@ public interface SpringDataRecordRepository extends FirestoreReactiveRepository<
      * @return flux of matching records
      */
     reactor.core.publisher.Flux<Record> findByCreatedAtLessThan(com.google.cloud.Timestamp timestamp);
+
+    /**
+     * Find all records owned by the given username.
+     *
+     * @param owner record owner
+     * @return flux of matching records
+     */
+    reactor.core.publisher.Flux<Record> findByOwner(String owner);
 }

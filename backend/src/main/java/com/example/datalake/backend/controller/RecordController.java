@@ -36,6 +36,14 @@ public class RecordController {
         return service.findAll();
     }
 
+    @Operation(summary = "List records by owner")
+    @GetMapping("/owner/{owner}")
+    public Flux<Record> byOwner(
+            @Parameter(description = "Owner username")
+            @PathVariable String owner) {
+        return service.findByOwner(owner);
+    }
+
     @Operation(summary = "Find a record by ID")
     @ApiResponse(responseCode = "200", description = "Found",
             content = @Content(schema = @Schema(implementation = Record.class)))
