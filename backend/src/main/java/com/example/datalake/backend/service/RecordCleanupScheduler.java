@@ -2,8 +2,10 @@ package com.example.datalake.backend.service;
 
 import com.example.datalake.backend.dao.SpringDataRecordRepository;
 import com.example.datalake.backend.model.Record;
+import com.google.cloud.Timestamp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -19,24 +21,22 @@ public class RecordCleanupScheduler {
     private final SpringDataRecordRepository repo;
     private final StorageService storageService;
 
-    private static final Duration TTL = Duration.ofHours(24);
+    @Value("${record.cleanup.ttl-hours:24}")
+    private long ttlHours;
 
     @Scheduled(fixedDelayString = "${record.cleanup.interval:3600000}")
     public void removeExpiredRecords() {
-        Instant cutoff = Instant.now().minus(TTL);
-        repo.findAll()
-                .filter(record -> isExpired(record, cutoff))
+        Duration ttl = Duration.ofHours(ttlHours);
+        Instant cutoffInstant = Instant.now().minus(ttl);
+        Timestamp cutoff = Timestamp.ofTimeSecondsAndNanos(
+                cutoffInstant.getEpochSecond(), cutoffInstant.getNano());
+
+        repo.findByCreatedAtLessThan(cutoff)
                 .flatMap(this::deleteRecord)
                 .subscribe(
                         r -> log.info("Removed expired record {}", r.getId()),
                         ex -> log.error("Error during record cleanup", ex)
                 );
-    }
-
-    private boolean isExpired(Record r, Instant cutoff) {
-        if (r.getCreatedAt() == null) return false;
-        Instant created = r.getCreatedAt().toDate().toInstant();
-        return created.isBefore(cutoff);
     }
 
     private Mono<Record> deleteRecord(Record r) {

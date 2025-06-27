@@ -9,4 +9,12 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface SpringDataRecordRepository extends FirestoreReactiveRepository<Record> {
+
+    /**
+     * Find all records created before the given timestamp.
+     *
+     * @param timestamp cutoff timestamp
+     * @return flux of matching records
+     */
+    reactor.core.publisher.Flux<Record> findByCreatedAtLessThan(com.google.cloud.Timestamp timestamp);
 }
