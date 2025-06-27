@@ -1,6 +1,7 @@
 # Moment Sharing
 
-This project contains a Spring Boot backend and a React frontend.
+This project contains a Spring Boot backend and a React frontend. It now uses
+Firebase for data storage instead of Supabase.
 
 ## Running the backend
 

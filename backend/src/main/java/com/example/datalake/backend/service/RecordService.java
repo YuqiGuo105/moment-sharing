@@ -21,7 +21,7 @@ public class RecordService {
     }
 
     public Record findById(UUID id) {
-        return repository.findById(id).orElse(null);
+        return repository.findById(id);
     }
 
     public Record save(Record record) {
