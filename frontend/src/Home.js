@@ -8,6 +8,7 @@ import './Home.css';
 function Home({ user }) {
   const [uploading, setUploading] = useState(false);
   const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -21,6 +22,23 @@ function Home({ user }) {
       await uploadBytes(fileRef, file);
       const downloadURL = await getDownloadURL(fileRef);
       setUrl(downloadURL);
+
+      try {
+        await fetch(
+          `${process.env.REACT_APP_BACKEND_BASE_URL || ''}/records`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: downloadURL,
+              owner: user.email,
+              description,
+            }),
+          }
+        );
+      } catch (err) {
+        console.error('Failed to create record', err);
+      }
     } finally {
       setUploading(false);
     }
@@ -31,6 +49,12 @@ function Home({ user }) {
       <img src={user.photoURL || logo} alt="Profile" className="profile" />
       <h1>Welcome {user.displayName || user.email}</h1>
       <p>{user.email}</p>
+
+      <textarea
+        placeholder="Description (optional)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
 
       <input
         type="file"
