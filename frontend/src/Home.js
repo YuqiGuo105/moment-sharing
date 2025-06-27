@@ -49,17 +49,32 @@ function Home({ user }) {
 
   return (
     <div className="home-container">
-      <img src={user.photoURL || logo} alt="Profile" className="profile" />
-      <h1>Welcome {user.displayName || user.email}</h1>
-      <p>{user.email}</p>
+      <div className="profile-section">
+        <img
+          src={user.photoURL || logo}
+          alt="Profile"
+          className="profile"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = logo;
+          }}
+        />
+        <div className="profile-details">
+          <h1 className="welcome">Welcome {user.displayName || user.email}</h1>
+          <p className="email">{user.email}</p>
+        </div>
+      </div>
 
       <textarea
+        className="description"
         placeholder="Description (optional)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
 
       <input
+        className="file-input"
         type="file"
         accept="image/*"
         capture="environment"
