@@ -24,14 +24,17 @@ function Home({ user }) {
       setUrl(downloadURL);
 
       try {
+        const token = await user.getIdToken();
         await fetch(
           `${process.env.REACT_APP_BACKEND_BASE_URL || ''}/records`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({
               url: downloadURL,
-              owner: user.email,
               description,
             }),
           }

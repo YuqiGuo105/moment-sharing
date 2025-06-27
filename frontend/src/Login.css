@@ -1,8 +1,20 @@
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #f6d365, #fda085);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .login-container {
   max-width: 400px;
-  margin: 0 auto;
+  background: #fff;
   padding: 2rem 1rem;
   text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .login-form {
@@ -21,6 +33,14 @@
   padding: 0.5rem;
   font-size: 1rem;
   cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.login-form button:hover {
+  background-color: #45a049;
 }
 
 .google-button {
@@ -33,6 +53,7 @@
   border-radius: 4px;
   padding: 0.5rem;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .google-button:hover {
