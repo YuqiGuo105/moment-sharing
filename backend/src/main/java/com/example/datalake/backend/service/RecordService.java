@@ -3,8 +3,10 @@ package com.example.datalake.backend.service;
 import com.example.datalake.backend.dao.SpringDataRecordRepository;
 import com.example.datalake.backend.dto.RecordDto;
 import com.example.datalake.backend.model.Record;
+import com.example.datalake.backend.service.StorageService;
 import com.google.cloud.Timestamp;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,9 +15,11 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RecordService {
 
     private final SpringDataRecordRepository repo;
+    private final StorageService storageService;
 
     /* ---------- READ ---------- */
     public Flux<Record> findAll() {
@@ -37,7 +41,14 @@ public class RecordService {
             entity.setCreatedAt(Timestamp.now());
         }
         return repo.findByOwner(entity.getOwner())
-                .flatMap(existing -> repo.deleteById(existing.getId()))
+                .flatMap(existing ->
+                        storageService.deleteObjectByUrl(existing.getUrl())
+                                .onErrorResume(e -> {
+                                    log.warn("Failed to delete file {}", existing.getUrl(), e);
+                                    return Mono.empty();
+                                })
+                                .then(repo.deleteById(existing.getId()))
+                )
                 .then(repo.save(entity));
     }
 
