@@ -30,4 +30,7 @@ public class RecordDto {
 
     @Schema(description = "Owner username", example = "alice")
     private String owner;
+
+    @Schema(description = "Optional description of the record")
+    private String description;
 }

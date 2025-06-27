@@ -32,4 +32,6 @@ public class Record {
 
     @NotBlank(message = "owner must not be blank")
     private String owner;
+
+    private String description;
 }

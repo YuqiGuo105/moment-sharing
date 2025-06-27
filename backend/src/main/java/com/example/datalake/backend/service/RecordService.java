@@ -34,7 +34,9 @@ public class RecordService {
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Timestamp.now());
         }
-        return repo.save(entity);
+        return repo.findByOwner(entity.getOwner())
+                .flatMap(existing -> repo.deleteById(existing.getId()))
+                .then(repo.save(entity));
     }
 
     /* ---------- UPDATE ---------- */
@@ -57,6 +59,7 @@ public class RecordService {
                 : Timestamp.now());
         r.setUrl(dto.getUrl());
         r.setOwner(dto.getOwner());
+        r.setDescription(dto.getDescription());
         return r;
     }
 
