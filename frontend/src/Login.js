@@ -9,14 +9,13 @@ import { auth } from './lib/firebaseClient';
 import './Login.css';
 
 const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="10" fill="#4285f4" />
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="12" r="10" />
     <text
       x="12"
       y="16"
       textAnchor="middle"
       fontSize="12"
-      fill="#fff"
       fontFamily="Arial, Helvetica, sans-serif"
     >
       G
