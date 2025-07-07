@@ -12,14 +12,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.UUID;
 
 @Tag(name = "Record", description = "CRUD operations for Record documents")
 @RestController
@@ -63,9 +58,7 @@ public class RecordController {
     public Mono<Record> create(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
                     content = @Content(schema = @Schema(implementation = RecordDto.class)))
-            @Valid @RequestBody RecordDto in,
-            Authentication authentication) {
-        in.setOwner(authentication.getName());
+            @Valid @RequestBody RecordDto in) {
         return service.create(in);
     }
 
@@ -75,9 +68,8 @@ public class RecordController {
     @PutMapping("/{id}")
     public Mono<Record> update(
             @Parameter(description = "Firestore document ID") @PathVariable String id,
-            @Valid @RequestBody Record in,
-            Authentication authentication) {
-        return service.update(id, in, authentication.getName());
+            @Valid @RequestBody Record in) {
+        return service.update(id, in);
     }
 
     /* ---------- DELETE ---------- */
@@ -85,8 +77,7 @@ public class RecordController {
     @Operation(summary = "Delete a record by ID")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> delete(@Parameter(description = "Firestore document ID") @PathVariable String id,
-                             Authentication authentication) {
-        return service.deleteById(id, authentication.getName());
+    public Mono<Void> delete(@Parameter(description = "Firestore document ID") @PathVariable String id) {
+        return service.deleteById(id);
     }
 }
