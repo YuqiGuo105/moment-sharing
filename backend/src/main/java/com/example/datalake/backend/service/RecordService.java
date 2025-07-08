@@ -40,6 +40,9 @@ public class RecordService {
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Timestamp.now());
         }
+        if (entity.getOwner() == null || entity.getOwner().isBlank()) {
+            entity.setOwner("anonymous");
+        }
         return repo.findByOwner(entity.getOwner())
                 .flatMap(existing ->
                         storageService.deleteObjectByUrl(existing.getUrl())
@@ -53,29 +56,23 @@ public class RecordService {
     }
 
     /* ---------- UPDATE ---------- */
-    public Mono<Record> update(String id, Record updated, String username) {
+    public Mono<Record> update(String id, Record updated) {
         return repo.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
                 .flatMap(existing -> {
-                    if (!existing.getOwner().equals(username)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN));
-                    }
                     updated.setId(id);
-                    updated.setOwner(username);
+                    if (updated.getOwner() == null || updated.getOwner().isBlank()) {
+                        updated.setOwner(existing.getOwner());
+                    }
                     return repo.save(updated);
                 });
     }
 
     /* ---------- DELETE ---------- */
-    public Mono<Void> deleteById(String id, String username) {
+    public Mono<Void> deleteById(String id) {
         return repo.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
-                .flatMap(existing -> {
-                    if (!existing.getOwner().equals(username)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN));
-                    }
-                    return repo.deleteById(id);
-                });
+                .flatMap(existing -> repo.deleteById(id));
     }
 
     /* ---------- Mapping helper ---------- */
