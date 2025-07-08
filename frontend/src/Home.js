@@ -5,6 +5,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import logo from './logo.svg';
 import './Home.css';
 
+const isIPhone = /iPhone/i.test(navigator.userAgent);
+
 function Home({ user }) {
   const [uploading, setUploading] = useState(false);
   const [url, setUrl] = useState('');
@@ -33,6 +35,7 @@ function Home({ user }) {
             },
             body: JSON.stringify({
               url: downloadURL,
+              owner: user.uid,
               description,
             }),
           }
@@ -74,8 +77,8 @@ function Home({ user }) {
       <input
         className="file-input"
         type="file"
-        accept="image/*"
-        capture="environment"
+        accept="image/*,video/*"
+        capture={isIPhone ? undefined : 'environment'}
         onChange={handleFileChange}
       />
       {uploading && <p>Uploading...</p>}
